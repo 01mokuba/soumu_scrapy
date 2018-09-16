@@ -40,5 +40,22 @@ class ArchiveSpider(CrawlSpider):
             })
         return item
 
-    def parse_archive_detail():
-        pass
+    def parse_archive_detail(self, response):
+        item = ClipItem()
+        item['src'] = response.xpath('//body').extract_first()
+        content_root = response.xpath('//div[@class=\'contentsBody\']')
+        item['text'] = content_root.extract_first()
+        item['attachments'] = []
+        item['file_urls'] = []
+        for d in response.xpath('//a'): #responseのaタグでループ
+            dd = d.xpath('@href').extract_first() #hrefの値を抽出
+            if dd is not None:  #hrefの値が存在する場合
+                if re.match('^https?://', dd) is None: #URLにhttp[s]が含まれていない場合
+                    dd = response.urljoin(dd) #responseのベースURLを組み合わせて完全なURLを作る
+                if re.match('.*\.[Pp][Dd][Ff]$', dd) is not None: #大文字/小文字のPDF/pdfがURL内に存在するとき
+                    item['attachments'].append({  
+                        'href': dd,
+                        'text': d.xpath('text()').extract_first()
+                    })
+                    item['file_urls'].append(dd)
+        return item
